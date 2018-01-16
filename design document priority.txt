@@ -1,0 +1,68 @@
+			 PRIORITY SCHEDULING
+			 ===================
+
+---- DATA STRUCTURES ----
+
+>> B1: Copy here the declaration of each new or changed `struct' or
+>> `struct' member, global or static variable, `typedef', or
+>> enumeration.  Identify the purpose of each in 25 words or less.
+
+struct thread added variables:
+int initialPriority;			The initial priority of the thread without donation.
+struct thread *waitingFor;		The thread that this thread is waiting for on a lock.
+struct lock *lockedOn;			The lock this thread is waiting for.
+struct list donors;				The list of donor threads.
+struct list_elem donor_elem;	The donor list element.
+
+>> B2: Explain the data structure used to track priority donation.
+>> Use ASCII art to diagram a nested donation.  (Alternately, submit a
+>> .png file.)
+
+I used a list of threads that stores the donor threads to this thread.
+For every thread, I stored the lock it's waiting for and the thread holding that lock.
+Having these pointers, I traverse them and donate priority.
+
+Let [x,y] represent a thread with initial priority x and current priority (with donation) y.
+Nested donation example: [5,5] -> [5,3] -> [5,1]
+
+---- ALGORITHMS ----
+
+>> B3: How do you ensure that the highest priority thread waiting for
+>> a lock, semaphore, or condition variable wakes up first?
+
+By sorting the waiters list by priority before poping a thread.
+
+>> B4: Describe the sequence of events when a call to lock_acquire()
+>> causes a priority donation.  How is nested donation handled?
+
+Let there be 3 threads L,H with low and high priorities.
+Initially, L is running and holding a lock.
+Then, thread H takes over and tries to acquire the same lock.
+This causes H to donate it's priority to L and L takes over.
+
+By traversing the pointers defined above, with a maximum depth of 8, maximizing the priority
+of the threads with the priority of the donor thread. 
+
+>> B5: Describe the sequence of events when lock_release() is called
+>> on a lock that a higher-priority thread is waiting for.
+
+Remove the donor thread from the donors list.
+Update the priority of this thread by the maximum between it's initial priority and the priority of it's new maximum donor (if it changed).
+Yield.
+
+---- SYNCHRONIZATION ----
+
+>> B6: Describe a potential race in thread_set_priority() and explain
+>> how your implementation avoids it.  Can you use a lock to avoid
+>> this race?
+
+The interrupt handler updates the threads priorities every 4 ticks, which can cause a race with the thread itself setting it's priority.
+This is handled by disabling interrupts.
+Locks can't be acquired by interrupt handler.
+
+---- RATIONALE ----
+
+>> B7: Why did you choose this design?  In what ways is it superior to
+>> another design you considered?
+
+This is the simplest design I could think of, I tried to minimize the amount of code so that debugging is easier.
